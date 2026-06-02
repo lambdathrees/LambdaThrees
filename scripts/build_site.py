@@ -175,14 +175,20 @@ def parse_player_stats(rows: list, team_key: dict) -> list:
             continue
         team = team_key.get(code, code)
         players.append({
-            "name": name,
-            "team": team,
-            "gp":   int(gp),
-            "pts":  round(pts, 1),
-            "reb":  round(reb, 1),
-            "ast":  round(ast, 1),
-            "stl":  round(stl, 1),
-            "blk":  round(blk, 1),
+            "name":     name,
+            "team":     team,
+            "gp":       int(gp),
+            "pts":      round(pts, 1),
+            "reb":      round(reb, 1),
+            "ast":      round(ast, 1),
+            "stl":      round(stl, 1),
+            "blk":      round(blk, 1),
+            # season totals (avg × GP, rounded to nearest whole number)
+            "pts_tot":  int(round(pts * gp)),
+            "reb_tot":  int(round(reb * gp)),
+            "ast_tot":  int(round(ast * gp)),
+            "stl_tot":  int(round(stl * gp)),
+            "blk_tot":  int(round(blk * gp)),
         })
     players.sort(key=lambda x: -x["pts"])
     return players
@@ -287,6 +293,7 @@ _NAV = [
     ("leaders.html",   "Leaders"),
     ("games.html",     "Games"),
     ("awards.html",    "Awards"),
+    ("career.html",    "Career"),
     ("history.html",   "History"),
 ]
 
@@ -438,30 +445,56 @@ def gen_standings(std, season):
 
 # ── Page: stats ──────────────────────────────────────────────────────────────
 
-def gen_stats(players, season):
-    rows = "".join(
-        f'<tr><td class="highlight">{h(p["name"])}</td>'
-        f'<td class="team-tag">{h(p["team"])}</td>'
-        f'<td class="num">{p["gp"]}</td>'
-        f'<td class="num">{fmt(p["pts"])}</td>'
-        f'<td class="num">{fmt(p["reb"])}</td>'
-        f'<td class="num">{fmt(p["ast"])}</td>'
-        f'<td class="num">{fmt(p["stl"])}</td>'
-        f'<td class="num">{fmt(p["blk"])}</td></tr>'
-        for p in players
+def _stats_table(players, mode="avg"):
+    """Render a sortable stats table. mode='avg' or 'tot'."""
+    if mode == "avg":
+        headers = ["Player", "Team", "GP", "PTS", "REB", "AST", "STL", "BLK"]
+        rows = "".join(
+            f'<tr><td class="highlight">{h(p["name"])}</td>'
+            f'<td class="team-tag">{h(p["team"])}</td>'
+            f'<td class="num">{p["gp"]}</td>'
+            f'<td class="num">{fmt(p["pts"])}</td>'
+            f'<td class="num">{fmt(p["reb"])}</td>'
+            f'<td class="num">{fmt(p["ast"])}</td>'
+            f'<td class="num">{fmt(p["stl"])}</td>'
+            f'<td class="num">{fmt(p["blk"])}</td></tr>'
+            for p in players
+        )
+    else:
+        headers = ["Player", "Team", "GP", "PTS", "REB", "AST", "STL", "BLK"]
+        rows = "".join(
+            f'<tr><td class="highlight">{h(p["name"])}</td>'
+            f'<td class="team-tag">{h(p["team"])}</td>'
+            f'<td class="num">{p["gp"]}</td>'
+            f'<td class="num">{p["pts_tot"]}</td>'
+            f'<td class="num">{p["reb_tot"]}</td>'
+            f'<td class="num">{p["ast_tot"]}</td>'
+            f'<td class="num">{p["stl_tot"]}</td>'
+            f'<td class="num">{p["blk_tot"]}</td></tr>'
+            for p in players
+        )
+    ths = "".join(f"<th>{c}</th>" for c in headers)
+    return (
+        f'<div class="table-wrap">'
+        f'<table class="sortable">'
+        f'<thead><tr>{ths}</tr></thead>'
+        f'<tbody>{rows}</tbody>'
+        f'</table></div>'
     )
+
+
+def gen_stats(players, season):
+    avg_table = _stats_table(players, "avg")
+    tot_table = _stats_table(sorted(players, key=lambda x: -x["pts_tot"]), "tot")
     return f"""
 <h1>Player Stats</h1>
-<p class="subtitle">{h(season)} — Per-Game Averages &middot; Click any column to sort</p>
-<div class="table-wrap">
-  <table class="sortable">
-    <thead><tr>
-      <th>Player</th><th>Team</th><th>GP</th>
-      <th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th>
-    </tr></thead>
-    <tbody>{rows}</tbody>
-  </table>
-</div>"""
+<p class="subtitle">{h(season)} &middot; Click any column header to sort</p>
+<div class="view-toggle">
+  <button class="vtog active" data-view-show="avg-view">Per Game</button>
+  <button class="vtog" data-view-show="tot-view">Season Totals</button>
+</div>
+<div id="avg-view">{avg_table}</div>
+<div id="tot-view" style="display:none">{tot_table}</div>"""
 
 
 # ── Page: leaders ────────────────────────────────────────────────────────────
@@ -497,11 +530,98 @@ def gen_leaders(players, season):
 <div class="leaders-grid">{cards}</div>"""
 
 
+# ── Bracket helpers ──────────────────────────────────────────────────────────
+
+def _annotate_playoff_rounds(playoff_games: list) -> list:
+    """
+    Tag each playoff game with its bracket round (Quarter / Semi / Final)
+    by tracking which teams have already won a game as we go chronologically.
+    """
+    won_so_far = set()
+    out = []
+    for g in playoff_games:
+        t1_won = g["team1"] in won_so_far
+        t2_won = g["team2"] in won_so_far
+        if t1_won and t2_won and len([x for x in out if x["bracket_round"] in ("Semi", "Final")]) >= 2:
+            bracket_round = "Final"
+        elif t1_won and t2_won:
+            bracket_round = "Semi"
+        else:
+            bracket_round = "Quarter"
+        out.append({**g, "bracket_round": bracket_round})
+        won_so_far.add(g["winner"])
+    return out
+
+
+def _matchup_card(g: dict) -> str:
+    c1 = "b-winner" if g["winner"] == g["team1"] else "b-loser"
+    c2 = "b-winner" if g["winner"] == g["team2"] else "b-loser"
+    champ = " &#9733;" if g.get("bracket_round") == "Final" and g["winner"] == g["winner"] else ""
+    champ_tag = f'<span class="b-champ">{champ}</span>' if g.get("bracket_round") == "Final" else ""
+    return (
+        f'<div class="bracket-matchup">'
+        f'<div class="b-team {c1}">'
+        f'<span class="b-name">{h(g["team1"])}</span>'
+        f'<span class="b-score">{h(g["score1"])}</span>'
+        f'{"&#9733;" if c1 == "b-winner" and g.get("bracket_round") == "Final" else ""}'
+        f'</div>'
+        f'<div class="b-team {c2}">'
+        f'<span class="b-name">{h(g["team2"])}</span>'
+        f'<span class="b-score">{h(g["score2"])}</span>'
+        f'{"&#9733;" if c2 == "b-winner" and g.get("bracket_round") == "Final" else ""}'
+        f'</div>'
+        f'</div>'
+    )
+
+
+def gen_bracket(games: list) -> str:
+    """
+    Build a bracket visual for Play-In + Playoff games.
+    Returns empty string if no playoff data is present.
+    """
+    playin   = [g for g in games if g["round"] == "Play-In"]
+    playoffs = [g for g in games if g["round"] == "Playoffs"]
+    if not playoffs:
+        return ""
+
+    annotated = _annotate_playoff_rounds(playoffs)
+    quarters  = [g for g in annotated if g["bracket_round"] == "Quarter"]
+    semis     = [g for g in annotated if g["bracket_round"] == "Semi"]
+    final     = next((g for g in annotated if g["bracket_round"] == "Final"), None)
+
+    stages = []
+    if playin:
+        stages.append(("Play-In", [dict(g, bracket_round="PlayIn") for g in playin]))
+    if quarters:
+        stages.append(("Round 1", quarters))
+    if semis:
+        stages.append(("Semifinals", semis))
+    if final:
+        stages.append(("Championship", [final]))
+
+    html = '<h2>Playoff Bracket</h2><div class="playoff-bracket">'
+    for i, (label, stage_games) in enumerate(stages):
+        if i > 0:
+            html += '<div class="bracket-arrow">&#10142;</div>'
+        cards = "".join(_matchup_card(g) for g in stage_games)
+        html += (
+            f'<div class="bracket-stage">'
+            f'<div class="stage-label">{label}</div>'
+            f'<div class="stage-games">{cards}</div>'
+            f'</div>'
+        )
+    html += "</div>"
+    return html
+
+
 # ── Page: games ──────────────────────────────────────────────────────────────
 
 def gen_games(games, season):
+    bracket_html = gen_bracket(games)
+
+    reg_games = [g for g in games if g["round"] not in ("Play-In", "Playoffs")]
     body = ""
-    for round_name, group in groupby(games, key=lambda g: g["round"]):
+    for round_name, group in groupby(reg_games, key=lambda g: g["round"]):
         body += f'<tr><td colspan="5" class="round-header">{h(round_name)}</td></tr>'
         for g in group:
             c1 = "winner" if g["winner"] == g["team1"] else "highlight"
@@ -515,9 +635,14 @@ def gen_games(games, season):
                 f'<td class="num">{h(g["score2"])}</td>'
                 f'</tr>'
             )
+
     return f"""
 <h1>Game Results</h1>
 <p class="subtitle">{h(season)}</p>
+
+{bracket_html}
+
+<h2>Regular Season</h2>
 <div class="table-wrap">
   <table>
     <thead><tr><th>Team</th><th>Pts</th><th></th><th>Team</th><th>Pts</th></tr></thead>
@@ -591,6 +716,109 @@ def gen_history(all_data):
 {sections}"""
 
 
+# ── Career stats ─────────────────────────────────────────────────────────────
+
+def compute_career_stats(all_data: list) -> list:
+    """
+    Aggregate per-season player stats across all loaded seasons.
+    Returns list of player dicts with career totals and averages.
+    """
+    career = {}
+    for season_name, data in all_data:
+        for p in data["players"]:
+            name = p["name"]
+            if name not in career:
+                career[name] = {
+                    "gp": 0, "pts": 0.0, "reb": 0.0,
+                    "ast": 0.0, "stl": 0.0, "blk": 0.0,
+                    "seasons": 0, "teams": set(),
+                }
+            gp = p["gp"]
+            c  = career[name]
+            c["gp"]      += gp
+            c["pts"]     += p["pts"] * gp
+            c["reb"]     += p["reb"] * gp
+            c["ast"]     += p["ast"] * gp
+            c["stl"]     += p["stl"] * gp
+            c["blk"]     += p["blk"] * gp
+            c["seasons"] += 1
+            c["teams"].add(p["team"])
+
+    result = []
+    for name, c in career.items():
+        gp = c["gp"]
+        if gp == 0:
+            continue
+        result.append({
+            "name":     name,
+            "seasons":  c["seasons"],
+            "teams":    ", ".join(sorted(c["teams"])),
+            "gp":       gp,
+            "pts":      round(c["pts"] / gp, 1),
+            "reb":      round(c["reb"] / gp, 1),
+            "ast":      round(c["ast"] / gp, 1),
+            "stl":      round(c["stl"] / gp, 1),
+            "blk":      round(c["blk"] / gp, 1),
+            "pts_tot":  int(round(c["pts"])),
+            "reb_tot":  int(round(c["reb"])),
+            "ast_tot":  int(round(c["ast"])),
+            "stl_tot":  int(round(c["stl"])),
+            "blk_tot":  int(round(c["blk"])),
+        })
+    result.sort(key=lambda x: -x["pts"])
+    return result
+
+
+def gen_career(career_players: list) -> str:
+    avg_rows = "".join(
+        f'<tr><td class="highlight">{h(p["name"])}</td>'
+        f'<td class="num">{p["seasons"]}</td>'
+        f'<td class="num">{p["gp"]}</td>'
+        f'<td class="num">{fmt(p["pts"])}</td>'
+        f'<td class="num">{fmt(p["reb"])}</td>'
+        f'<td class="num">{fmt(p["ast"])}</td>'
+        f'<td class="num">{fmt(p["stl"])}</td>'
+        f'<td class="num">{fmt(p["blk"])}</td>'
+        f'<td class="team-tag" style="font-size:.75rem">{h(p["teams"])}</td></tr>'
+        for p in career_players
+    )
+    tot_rows = "".join(
+        f'<tr><td class="highlight">{h(p["name"])}</td>'
+        f'<td class="num">{p["seasons"]}</td>'
+        f'<td class="num">{p["gp"]}</td>'
+        f'<td class="num">{p["pts_tot"]}</td>'
+        f'<td class="num">{p["reb_tot"]}</td>'
+        f'<td class="num">{p["ast_tot"]}</td>'
+        f'<td class="num">{p["stl_tot"]}</td>'
+        f'<td class="num">{p["blk_tot"]}</td>'
+        f'<td class="team-tag" style="font-size:.75rem">{h(p["teams"])}</td></tr>'
+        for p in sorted(career_players, key=lambda x: -x["pts_tot"])
+    )
+    avg_table = (
+        '<div class="table-wrap"><table class="sortable">'
+        '<thead><tr><th>Player</th><th>Seasons</th><th>GP</th>'
+        '<th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>Team(s)</th>'
+        '</tr></thead>'
+        f'<tbody>{avg_rows}</tbody></table></div>'
+    )
+    tot_table = (
+        '<div class="table-wrap"><table class="sortable">'
+        '<thead><tr><th>Player</th><th>Seasons</th><th>GP</th>'
+        '<th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>Team(s)</th>'
+        '</tr></thead>'
+        f'<tbody>{tot_rows}</tbody></table></div>'
+    )
+    return f"""
+<h1>Career Stats</h1>
+<p class="subtitle">All-time per-game averages and totals across every season &middot; Click any column to sort</p>
+<div class="view-toggle">
+  <button class="vtog active" data-view-show="cavg-view">Per Game</button>
+  <button class="vtog" data-view-show="ctot-view">Career Totals</button>
+</div>
+<div id="cavg-view">{avg_table}</div>
+<div id="ctot-view" style="display:none">{tot_table}</div>"""
+
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 def build():
@@ -627,6 +855,8 @@ def build():
         latest["games"],     latest["awards"],
     )
 
+    career_players = compute_career_stats(all_data)
+
     pages = {
         "index.html":    (latest_name,    gen_index(std, players, games, awards, latest_name)),
         "standings.html":("Standings",    gen_standings(std, latest_name)),
@@ -634,6 +864,7 @@ def build():
         "leaders.html":  ("Leaders",      gen_leaders(players, latest_name)),
         "games.html":    ("Games",        gen_games(games, latest_name)),
         "awards.html":   ("Awards",       gen_awards(awards, latest_name)),
+        "career.html":   ("Career Stats", gen_career(career_players)),
         "history.html":  ("History",      gen_history(all_data)),
     }
 

@@ -26,6 +26,21 @@ document.querySelectorAll('table.sortable').forEach(table => {
   });
 });
 
+// Per Game / Totals toggle
+document.querySelectorAll('.vtog').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetId = btn.dataset.viewShow;
+    // find sibling toggle buttons (same .view-toggle parent)
+    btn.closest('.view-toggle').querySelectorAll('.vtog').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // find all view divs that share a common parent with the toggle
+    const container = btn.closest('.page') || document.body;
+    container.querySelectorAll('[id$="-view"]').forEach(el => {
+      el.style.display = el.id === targetId ? '' : 'none';
+    });
+  });
+});
+
 // History season tabs
 document.querySelectorAll('.season-tab').forEach(tab => {
   tab.addEventListener('click', () => {

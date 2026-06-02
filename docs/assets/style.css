@@ -191,6 +191,86 @@ td.team-tag {
   border-left: 3px solid #1e90ff;
 }
 
+/* ── View toggle (Per Game / Totals) ── */
+.view-toggle {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+.vtog {
+  background: #1b2d44;
+  border: 1px solid #1e3a5a;
+  border-radius: 20px;
+  color: #78909c;
+  cursor: pointer;
+  font-size: 0.82rem;
+  padding: 0.35rem 1rem;
+  transition: background 0.15s, color 0.15s;
+}
+.vtog:hover { color: #e0e6ed; }
+.vtog.active { background: #1e3a5a; color: #ffffff; border-color: #2a5080; }
+
+/* ── Playoff bracket ── */
+.playoff-bracket {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  margin: 0.75rem 0 2rem;
+}
+.bracket-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 170px;
+}
+.stage-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #78909c;
+  margin-bottom: 0.6rem;
+}
+.stage-games {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  justify-content: space-around;
+  width: 100%;
+  padding: 0 0.25rem;
+}
+.bracket-matchup {
+  background: #1b2d44;
+  border: 1px solid #1e3a5a;
+  border-radius: 6px;
+  overflow: hidden;
+  width: 100%;
+}
+.b-team {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #0f2030;
+  gap: 0.5rem;
+}
+.b-team:last-child { border-bottom: none; }
+.b-team.b-winner { background: #0d2a1a; color: #ffffff; font-weight: 600; }
+.b-team.b-loser  { color: #4a6070; }
+.b-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.b-score { color: #1e90ff; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+.b-team.b-winner .b-score { color: #4cdf90; }
+.bracket-arrow {
+  color: #1e3a5a;
+  font-size: 1.4rem;
+  padding: 0 0.3rem;
+  flex-shrink: 0;
+  align-self: center;
+  margin-top: 1.2rem;
+}
+
 /* ── Footer ── */
 footer {
   text-align: center;

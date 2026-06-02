@@ -26,6 +26,18 @@ document.querySelectorAll('table.sortable').forEach(table => {
   });
 });
 
+// Game row expand / collapse box score
+document.querySelectorAll('.game-summary-row').forEach(row => {
+  row.addEventListener('click', () => {
+    const boxId = row.dataset.box;
+    const boxRow = document.getElementById(boxId);
+    if (!boxRow) return;
+    const isOpen = boxRow.style.display !== 'none' && boxRow.style.display !== '';
+    boxRow.style.display = isOpen ? 'none' : '';
+    row.classList.toggle('open', !isOpen);
+  });
+});
+
 // Per Game / Totals toggle
 document.querySelectorAll('.vtog').forEach(btn => {
   btn.addEventListener('click', () => {

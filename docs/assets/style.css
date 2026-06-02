@@ -191,6 +191,58 @@ td.team-tag {
   border-left: 3px solid #1e90ff;
 }
 
+/* ── Box scores ── */
+.game-summary-row { cursor: pointer; }
+.game-summary-row:hover td { background: #1a3550 !important; }
+.game-summary-row.open td { background: #102030; }
+.expand-icon {
+  font-size: 0.6rem;
+  color: #37474f;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+.game-summary-row.open .expand-icon { transform: rotate(180deg); color: #1e90ff; }
+.vs-cell { text-align: center; color: #546e7a; }
+
+.box-score-row { display: none; }
+.box-score-row td { padding: 0.75rem 0.85rem 1rem; background: #0d1b2a; }
+
+.boxscore-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.box-team-hdr {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px 4px 0 0;
+  margin-bottom: 0;
+}
+.box-team-hdr.winner { background: #0d2a1a; color: #4cdf90; }
+.box-team-hdr.highlight { background: #102030; color: #78909c; }
+
+.box-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.box-table thead th {
+  background: #0f2030;
+  color: #546e7a;
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.box-table tbody td { padding: 0.28rem 0.5rem; color: #c0cdd8; border-bottom: 1px solid #0d1f2e; }
+.box-table tbody tr:last-child td { border-bottom: none; }
+.box-table tbody tr:hover td { background: #111f2e; }
+.box-dnp td { color: #3a5060 !important; }
+
+@media (max-width: 600px) {
+  .boxscore-grid { grid-template-columns: 1fr; }
+}
+
 /* ── View toggle (Per Game / Totals) ── */
 .view-toggle {
   display: flex;

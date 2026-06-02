@@ -223,28 +223,36 @@ def parse_games(rows: list) -> list:
     - 'Game N' markers in col[0] flush the current game pair.
     - Two consecutive team sections = one game.
     """
-    games        = []
+    games         = []
     current_round = "Week 1"
-    game_teams   = []          # list of {name, score} — at most 2 before flush
-    cur_team     = None
-    cur_pts      = 0.0
+    game_teams    = []
+    cur_team      = None
+    cur_pts       = 0.0
+    cur_players   = []   # individual player rows for current team
 
     def _flush_team():
-        nonlocal cur_team, cur_pts
+        nonlocal cur_team, cur_pts, cur_players
         if cur_team:
-            game_teams.append({"name": cur_team, "score": int(round(cur_pts))})
-        cur_team = None
-        cur_pts  = 0.0
+            game_teams.append({
+                "name":    cur_team,
+                "score":   int(round(cur_pts)),
+                "players": cur_players[:],
+            })
+        cur_team    = None
+        cur_pts     = 0.0
+        cur_players = []
 
     def _flush_game():
         if len(game_teams) >= 2:
             t1, t2 = game_teams[0], game_teams[1]
             winner = t1["name"] if t1["score"] > t2["score"] else t2["name"]
             games.append({
-                "round":  current_round,
-                "team1":  t1["name"], "score1": str(t1["score"]),
-                "team2":  t2["name"], "score2": str(t2["score"]),
-                "winner": winner,
+                "round":    current_round,
+                "team1":    t1["name"], "score1": str(t1["score"]),
+                "team2":    t2["name"], "score2": str(t2["score"]),
+                "winner":   winner,
+                "boxscore": {t1["name"]: t1["players"],
+                             t2["name"]: t2["players"]},
             })
         game_teams.clear()
 
@@ -274,17 +282,31 @@ def parse_games(rows: list) -> list:
             _flush_team()
             if len(game_teams) >= 2:
                 _flush_game()
-            cur_team = norm
-            cur_pts  = 0.0
+            cur_team    = norm
+            cur_pts     = 0.0
+            cur_players = []
             continue
 
-        # Player stat rows — accumulate points for current team
+        # Player stat rows — accumulate points and capture individual stats
         if cur_team and len(row) > 2:
             name_cell = row[1].strip()
             pts_cell  = row[2].strip()
             if name_cell and name_cell not in ("Player", "Total") and pts_cell:
                 try:
-                    cur_pts += float(pts_cell)
+                    pts = float(pts_cell)
+                    reb = float(row[3]) if len(row) > 3 and row[3].strip() else 0.0
+                    ast = float(row[4]) if len(row) > 4 and row[4].strip() else 0.0
+                    stl = float(row[5]) if len(row) > 5 and row[5].strip() else 0.0
+                    blk = float(row[6]) if len(row) > 6 and row[6].strip() else 0.0
+                    cur_pts += pts
+                    cur_players.append({
+                        "name": name_cell,
+                        "pts":  int(round(pts)),
+                        "reb":  int(round(reb)),
+                        "ast":  int(round(ast)),
+                        "stl":  int(round(stl)),
+                        "blk":  int(round(blk)),
+                    })
                 except ValueError:
                     pass
 
@@ -626,35 +648,86 @@ def gen_bracket(games: list) -> str:
 
 # ── Page: games ──────────────────────────────────────────────────────────────
 
+def _box_table(players: list) -> str:
+    """Render one team's box score as a compact table."""
+    rows = "".join(
+        f'<tr><td>{h(p["name"])}</td>'
+        f'<td class="num">{p["pts"]}</td>'
+        f'<td class="num">{p["reb"]}</td>'
+        f'<td class="num">{p["ast"]}</td>'
+        f'<td class="num">{p["stl"]}</td>'
+        f'<td class="num">{p["blk"]}</td></tr>'
+        for p in players if p["pts"] > 0 or p["reb"] > 0 or p["ast"] > 0
+    )
+    # always show non-contributors too
+    zeros = "".join(
+        f'<tr class="box-dnp"><td>{h(p["name"])}</td>'
+        f'<td class="num">0</td><td class="num">0</td>'
+        f'<td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>'
+        for p in players if p["pts"] == 0 and p["reb"] == 0 and p["ast"] == 0
+    )
+    return (
+        '<table class="box-table">'
+        '<thead><tr><th>Player</th><th>PTS</th><th>REB</th>'
+        '<th>AST</th><th>STL</th><th>BLK</th></tr></thead>'
+        f'<tbody>{rows}{zeros}</tbody>'
+        '</table>'
+    )
+
+
+def _game_rows(g: dict, gid: int) -> str:
+    """Render a clickable game summary row + hidden box score row."""
+    c1 = "winner" if g["winner"] == g["team1"] else "highlight"
+    c2 = "winner" if g["winner"] == g["team2"] else "highlight"
+    bs  = g.get("boxscore", {})
+    t1_box = _box_table(bs.get(g["team1"], []))
+    t2_box = _box_table(bs.get(g["team2"], []))
+    box_html = (
+        f'<div class="boxscore-grid">'
+        f'<div class="box-team">'
+        f'<div class="box-team-hdr {c1}">{h(g["team1"])} &mdash; {h(g["score1"])}</div>'
+        f'{t1_box}</div>'
+        f'<div class="box-team">'
+        f'<div class="box-team-hdr {c2}">{h(g["team2"])} &mdash; {h(g["score2"])}</div>'
+        f'{t2_box}</div>'
+        f'</div>'
+    )
+    return (
+        f'<tr class="game-summary-row" data-box="box-{gid}">'
+        f'<td class="{c1}">{h(g["team1"])}</td>'
+        f'<td class="num">{h(g["score1"])}</td>'
+        f'<td class="vs-cell">vs</td>'
+        f'<td class="{c2}">{h(g["team2"])}</td>'
+        f'<td class="num">{h(g["score2"])}'
+        f'<span class="expand-icon">&#9660;</span></td>'
+        f'</tr>'
+        f'<tr class="box-score-row" id="box-{gid}">'
+        f'<td colspan="5">{box_html}</td>'
+        f'</tr>'
+    )
+
+
 def gen_games(games, season):
     bracket_html = gen_bracket(games)
 
     reg_games = [g for g in games if g["round"] not in ("Play-In", "Playoffs")]
+    gid = 0
     body = ""
     for round_name, group in groupby(reg_games, key=lambda g: g["round"]):
         body += f'<tr><td colspan="5" class="round-header">{h(round_name)}</td></tr>'
         for g in group:
-            c1 = "winner" if g["winner"] == g["team1"] else "highlight"
-            c2 = "winner" if g["winner"] == g["team2"] else "highlight"
-            body += (
-                f'<tr>'
-                f'<td class="{c1}">{h(g["team1"])}</td>'
-                f'<td class="num">{h(g["score1"])}</td>'
-                f'<td style="text-align:center;color:#546e7a">vs</td>'
-                f'<td class="{c2}">{h(g["team2"])}</td>'
-                f'<td class="num">{h(g["score2"])}</td>'
-                f'</tr>'
-            )
+            body += _game_rows(g, gid)
+            gid += 1
 
     return f"""
 <h1>Game Results</h1>
-<p class="subtitle">{h(season)}</p>
+<p class="subtitle">{h(season)} &middot; Click any game to see the box score</p>
 
 {bracket_html}
 
 <h2>Regular Season</h2>
 <div class="table-wrap">
-  <table>
+  <table class="games-table">
     <thead><tr><th>Team</th><th>Pts</th><th></th><th>Team</th><th>Pts</th></tr></thead>
     <tbody>{body}</tbody>
   </table>

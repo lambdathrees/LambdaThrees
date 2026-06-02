@@ -1,0 +1,7 @@
+[
+  {
+    "name": "Spring 2026",
+    "scorecard": "data/processed/Spring_26.csv",
+    "teams": "data/processed/Teams.csv"
+  }
+]

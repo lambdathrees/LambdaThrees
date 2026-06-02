@@ -1,0 +1,210 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0d1b2a;
+  color: #e0e6ed;
+  min-height: 100vh;
+}
+
+/* ── Nav ── */
+nav {
+  background: #0a1520;
+  border-bottom: 2px solid #1e90ff;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+nav .league-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e90ff;
+  padding: 1rem 1.5rem 1rem 0;
+  margin-right: 1rem;
+  border-right: 1px solid #1e3a5a;
+  white-space: nowrap;
+}
+nav a {
+  color: #b0bec5;
+  text-decoration: none;
+  padding: 1rem 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  transition: color 0.15s;
+}
+nav a:hover, nav a.active { color: #1e90ff; }
+
+/* ── Page layout ── */
+.page { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+h1 { font-size: 1.6rem; font-weight: 700; color: #ffffff; margin-bottom: 0.25rem; }
+h2 { font-size: 1.15rem; font-weight: 600; color: #90caf9; margin: 2rem 0 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.subtitle { color: #78909c; font-size: 0.9rem; margin-bottom: 2rem; }
+
+/* ── Tables ── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+thead th {
+  background: #102030;
+  color: #90caf9;
+  padding: 0.6rem 0.85rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-bottom: 1px solid #1e3a5a;
+}
+table.sortable thead th { cursor: pointer; user-select: none; }
+table.sortable thead th:hover { color: #1e90ff; }
+table.sortable thead th.sort-asc::after  { content: " ▲"; font-size: 0.65rem; }
+table.sortable thead th.sort-desc::after { content: " ▼"; font-size: 0.65rem; }
+tbody tr { border-bottom: 1px solid #132030; }
+tbody tr:nth-child(even) { background: #111f2e; }
+tbody tr:hover { background: #162840; }
+td { padding: 0.55rem 0.85rem; color: #d0dce8; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.highlight { color: #ffffff; font-weight: 600; }
+td.winner { color: #4caf87; font-weight: 600; }
+td.team-tag {
+  color: #90caf9;
+  font-size: 0.8rem;
+}
+
+/* ── Stat leader cards ── */
+.leaders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+.leader-card {
+  background: #1b2d44;
+  border: 1px solid #1e3a5a;
+  border-radius: 6px;
+  padding: 1rem;
+}
+.leader-card h3 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #78909c;
+  margin-bottom: 0.6rem;
+}
+.leader-card .leader-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #0f2030;
+  font-size: 0.88rem;
+}
+.leader-card .leader-row:last-child { border-bottom: none; }
+.leader-card .leader-row .rank { color: #78909c; font-size: 0.75rem; margin-right: 0.4rem; }
+.leader-card .leader-row .name { color: #e0e6ed; flex: 1; }
+.leader-card .leader-row .val  { color: #1e90ff; font-weight: 700; font-size: 0.95rem; }
+
+/* ── Awards ── */
+.awards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.award-card {
+  background: #1b2d44;
+  border: 1px solid #1e3a5a;
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.award-card .award-name { font-size: 0.82rem; color: #90caf9; font-weight: 500; }
+.award-card .award-winner { font-size: 0.95rem; color: #ffffff; font-weight: 700; text-align: right; }
+
+/* ── Index hero panels ── */
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+.hero-panel {
+  background: #1b2d44;
+  border: 1px solid #1e3a5a;
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+.hero-panel h3 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #78909c;
+  margin-bottom: 0.75rem;
+}
+.champ-banner {
+  background: linear-gradient(135deg, #102030 0%, #0a2040 100%);
+  border: 1px solid #1e90ff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.champ-banner .trophy { font-size: 2.5rem; }
+.champ-banner .champ-info h2 { margin: 0 0 0.2rem; font-size: 1.3rem; color: #fff; text-transform: none; letter-spacing: 0; }
+.champ-banner .champ-info p  { color: #90caf9; font-size: 0.9rem; }
+
+/* ── History season selector ── */
+.season-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.season-tab {
+  background: #1b2d44;
+  border: 1px solid #1e3a5a;
+  border-radius: 4px;
+  padding: 0.45rem 1rem;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: #90caf9;
+  transition: background 0.15s;
+}
+.season-tab:hover, .season-tab.active { background: #1e3a5a; color: #fff; }
+.season-section { display: none; }
+.season-section.visible { display: block; }
+
+/* ── Round headers in games ── */
+.round-header {
+  background: #102030;
+  color: #90caf9;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.45rem 0.85rem;
+  border-left: 3px solid #1e90ff;
+}
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  color: #37474f;
+  font-size: 0.8rem;
+  padding: 2rem;
+  border-top: 1px solid #132030;
+  margin-top: 3rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  nav { padding: 0 0.75rem; }
+  nav a { padding: 0.75rem 0.5rem; font-size: 0.78rem; }
+  .page { padding: 1.25rem 0.75rem 3rem; }
+  .leaders-grid { grid-template-columns: 1fr 1fr; }
+}

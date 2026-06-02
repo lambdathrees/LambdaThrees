@@ -351,7 +351,7 @@ def html_page(title: str, body: str, active: str = "") -> str:
 {body}
 </div>
 <footer>{LEAGUE_NAME} &middot; Stats site updated from season data</footer>
-<script src="assets/sort.js"></script>
+<script src="assets/sort.js?v=3"></script>
 </body>
 </html>"""
 
@@ -701,7 +701,7 @@ def _game_rows(g: dict, gid: int) -> str:
         f'<td class="num">{h(g["score2"])}'
         f'<span class="expand-icon">&#9660;</span></td>'
         f'</tr>'
-        f'<tr class="box-score-row" id="box-{gid}">'
+        f'<tr class="box-score-row" id="box-{gid}" style="display:none">'
         f'<td colspan="5">{box_html}</td>'
         f'</tr>'
     )

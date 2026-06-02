@@ -125,7 +125,17 @@ def parse_awards(rows: list) -> list:
                 if text not in seen:
                     seen.add(text)
                     awards.append(entry)
-    return awards
+
+    # Remove any award whose name is a plain substring of a longer award already
+    # collected (e.g. bare "MVP" is redundant once "MVP(reg season)" exists).
+    all_names = [a[0].lower() for a in awards]
+    return [
+        a for a in awards
+        if not any(
+            a[0].lower() != other and a[0].lower() in other
+            for other in all_names
+        )
+    ]
 
 
 # ── Parser: player stats ─────────────────────────────────────────────────────

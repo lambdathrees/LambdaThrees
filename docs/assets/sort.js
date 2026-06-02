@@ -29,11 +29,10 @@ document.querySelectorAll('table.sortable').forEach(table => {
 // Game row expand / collapse box score
 document.querySelectorAll('.game-summary-row').forEach(row => {
   row.addEventListener('click', () => {
-    const boxId = row.dataset.box;
-    const boxRow = document.getElementById(boxId);
+    const boxRow = document.getElementById(row.dataset.box);
     if (!boxRow) return;
-    const isOpen = boxRow.style.display !== 'none' && boxRow.style.display !== '';
-    boxRow.style.display = isOpen ? 'none' : '';
+    const isOpen = row.classList.contains('open');
+    boxRow.style.display = isOpen ? 'none' : 'table-row';
     row.classList.toggle('open', !isOpen);
   });
 });
